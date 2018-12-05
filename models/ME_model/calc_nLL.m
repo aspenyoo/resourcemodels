@@ -35,6 +35,9 @@ function nLL = calc_nLL(model,Theta,data,fixparams,exppriorityVec)
 %   FIXPARAMS: (optional). 2 x (number of fixed parameters) matrix. fixed 
 %     parameters, such that the first row corresponds to the index and 
 %     second row corresponds to the value of the fixed parameter. 
+% 
+%   EXPPRIORITYVEC: vector of priority values (in decreasing order of
+%     priority) e.g., [0.6 0.3 0.1]
 %
 %   ================= OUTPUT VARIABLES ================
 % 
