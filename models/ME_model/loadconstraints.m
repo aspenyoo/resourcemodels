@@ -5,7 +5,8 @@ function [logflag, lb, ub, plb, pub, nonbcon] = loadconstraints(model,exppriorit
 % 
 % ===== INPUT VARIABLES =====
 % 
-% MODEL: 'max_points', 'flexible', 'proportional', or 'min_error'
+% MODEL: 'max_points', 'flexible', 'proportional', 'min_error', or
+%   'resourcerational'
 % 
 % EXPPRIORITYVEC: row vector of experimental priority.
 %   sum(exppriorityVec) = 1
@@ -31,18 +32,24 @@ end
 
 switch model
     case 'flexible' % define p_high p_med for Flexible model
-        lb = [lb 1e-10.*ones(1,nPriorities-1)];
-        ub = [ub ones(1,nPriorities-1)];
+        lb  = [lb 1e-10.*ones(1,nPriorities-1)];
+        ub  = [ub ones(1,nPriorities-1)];
         plb = [plb max([1e-10.*ones(1,nPriorities-1); exppriorityVec(1:end-1).*0.5])];
         pub = [pub min([ones(1,nPriorities-1); exppriorityVec(1:end-1).*1.5])];
         logflag = [logflag zeros(1,nPriorities-1)];
     case 'min_error' % gamma for Minimizing Error model
-        lb = [lb 1e-10];
-        ub = [ub 10];
+        lb  = [lb 1e-10];
+        ub  = [ub 10];
         plb = [plb 1e-3];
         pub = [pub 1];
         logflag = [logflag 1];
         nonbcon = @model4nonbcon; % violates if Jbar/tau - gamma/2 <= 0 
+    case 'resourcerational' % tau, lambda, beta
+        lb  = [lb(2)  1e-8    0];   % lower bounds on parameters
+        ub  = [ub(2)     1   10];   % upper bounds on parameters
+        plb = [plb(2) 1e-6    0];   % plausible lower bounds
+        pub = [pub(2)  .01    3];   % plausible upper bounds
+        logflag = [1 0 1];
     otherwise
         nonbcon = [];
 end

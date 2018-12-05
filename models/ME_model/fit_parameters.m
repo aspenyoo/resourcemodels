@@ -14,7 +14,8 @@ function [ML_parameters, nLLVec, runlist_completed] = fit_parameters(model,data,
 % 
 %   ============ INPUT VARIABLES ============
 % 
-%   MODEL: string. 'max_points', 'flexible', 'proportional', or 'min_error'
+%   MODEL: string. 'max_points', 'flexible', 'proportional', 'min_error',
+%     or 'resourcerational'
 % 
 %   DATA: cell of length nPriorities. the ith element of DATA should be
 %     all data corresponding to EXPPRIORITYVEC(i) condition. the first
@@ -101,7 +102,11 @@ for irun = 1:length(runlist)
     rng(runlist(irun));
     
     x0 = x0_list(runlist(irun),:);
+    if strcmp(model,'resourcerational')
+        fun = @(x) calc_nLL_RR(x,data,fixparams,exppriorityVec);
+    else
     fun = @(x) calc_nLL(model,x,data,fixparams,exppriorityVec);
+    end
     
     x = bads(fun,x0,lb,ub,plb,pub,@(y) check_nonbcon(model,y));
     fval = fun(x);
