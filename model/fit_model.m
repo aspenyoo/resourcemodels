@@ -43,13 +43,14 @@ function fit_model(data)
 % load(sprintf('data/data_E%d.mat',expid),'data');
 % data = data{subjidx};
 
-% Set up "global" variable structure for easy passing to functions
-gvar.kmap = [linspace(0,10,250) linspace(10.001,20000,500)];
-gvar.Jmap = gvar.kmap.*besseli(1,gvar.kmap,1)./besseli(0,gvar.kmap,1); % mapping from kappa to J (see Appendix 1)
-gvar.n_gamma_bins = 50;        % number of bins to use to discretize Gamma distribution over J when computing model predictions
-gvar.n_VM_bins = 360;          % number of bins to use to discretize Von Mises distribution over estimation error when computing model predictions
-gvar.n_initpars_try = 25;      % number of random parameter vectors to try for initialization of optimizer
-gvar.uPi = unique(data.p_i)';  % unique values of p_i in this dataset
+gvar = loadvar('gvar');
+% % Set up "global" variable structure for easy passing to functions
+% gvar.kmap = [linspace(0,10,250) linspace(10.001,20000,500)];
+% gvar.Jmap = gvar.kmap.*besseli(1,gvar.kmap,1)./besseli(0,gvar.kmap,1); % mapping from kappa to J (see Appendix 1)
+% gvar.n_gamma_bins = 50;        % number of bins to use to discretize Gamma distribution over J when computing model predictions
+% gvar.n_VM_bins = 360;          % number of bins to use to discretize Von Mises distribution over estimation error when computing model predictions
+% gvar.n_initpars_try = 25;      % number of random parameter vectors to try for initialization of optimizer
+% gvar.uPi = unique(data.p_i)';  % unique values of p_i in this dataset
 
 fprintf('\nNOTE: Increase n_gamma_bins, n_VM_bins, and n_initpars_try to get more precise results\n\n');
 
@@ -63,6 +64,7 @@ fprintf(' Parameter estimates    (init) = %2.2f (tau), %2.5f (lambda), %2.3f (be
 fprintf('Running optimizer to find maximum-likelihood parameter estimates...\n');
 bads_options = bads('defaults');
 bads_options.Display = 'off';
+% [fitpars, mLLH] = bads(@(pars) calc_nLL_RR(pars, data, gvar), fp_init, lb, ub, plb, pub, bads_options);
 [fitpars, mLLH] = bads(@(pars) -LLH_function(pars, data, gvar), fp_init, lb, ub, plb, pub, bads_options);
 fprintf(' Maximum log likelihood (final) = %2.1f\n',-mLLH);
 fprintf(' AIC                    (final) = %2.1f\n',2*mLLH + 2*numel(fitpars));
@@ -119,7 +121,7 @@ for ii=1:gvar.n_initpars_try
         initpars = parvec;
     end
 end
-
+ 
 % This function discretizes a gamma distribution and returns bin centers
 function bins = discretize_gamma(Jbar,tau,nbins)
 X = linspace(0,1,nbins+1);

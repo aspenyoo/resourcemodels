@@ -45,11 +45,11 @@ switch model
         logflag = [logflag 1];
         nonbcon = @model4nonbcon; % violates if Jbar/tau - gamma/2 <= 0 
     case 'resourcerational' % tau, lambda, beta
-        lb  = [lb(2)  1e-8    0];   % lower bounds on parameters
-        ub  = [ub(2)     1   10];   % upper bounds on parameters
-        plb = [plb(2) 1e-6    0];   % plausible lower bounds
+        lb  = [lb(2)  1e-8    1e-5];   % lower bounds on parameters
+        ub  = [ub(2)     1    10];   % upper bounds on parameters
+        plb = [plb(2) 1e-6    1e-5];   % plausible lower bounds
         pub = [pub(2)  .01    3];   % plausible upper bounds
-        logflag = [1 0 1];
+        logflag = [0 0 0];
     otherwise
         nonbcon = [];
 end
