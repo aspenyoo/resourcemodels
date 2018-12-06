@@ -103,7 +103,7 @@ for irun = 1:length(runlist)
     
     x0 = x0_list(runlist(irun),:);
     if strcmp(model,'resourcerational')
-        fun = @(x) calc_nLL_RR(x,data,fixparams,exppriorityVec);
+        fun = @(x) calc_nLL_RR(x,data,exppriorityVec,fixparams);
     else
     fun = @(x) calc_nLL(model,x,data,fixparams,exppriorityVec);
     end
