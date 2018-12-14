@@ -96,7 +96,11 @@ if any(isinf(pVec))
 else
     nLL = 0;
     for ipriority = 1:nPriorities
-        Jbar = Jbar_total*pVec(ipriority); % Jbar for current priority condition
+        if strcmp('resourcerational',model)
+            Jbar = fminsearch(@(pars) cost_function(pars,tau,lambda,beta,p), 1);
+        else
+            Jbar = Jbar_total*pVec(ipriority); % Jbar for current priority condition
+        end
         
         % clear varaibles used in previous priorities (necessary for code to run)
         clear idx1 idx2 data_r_reshaped

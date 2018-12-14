@@ -27,3 +27,11 @@ Jpdf = Jpdf./sum(Jpdf);
 
 % EU(Jbar) = \int EU(J) p(J) dJ
 E_EU = sum(Jpdf.*EU_J);
+
+function EU = calc_EU(rVec,JVec,alpha)
+% size: rVec = 1:nR
+
+% calc_p_Hit gives size rVec x JVec
+% rewardFn gives 1 x rVec
+
+EU = bsxfun(@times, calc_p_Hit(rVec,JVec), rewardFn(rVec,alpha)');

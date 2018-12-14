@@ -1,4 +1,4 @@
-function nLL = calc_nLL_RR(theta,data,exppriorityVec,fixparams)
+function nLL = calc_nLL_RR(Theta,data,exppriorityVec,fixparams)
 % calc_nLL_RR(x,data,exppriorityVec,fixparams);
 % 
 %   ================= INPUT VARIABLES ================
@@ -39,20 +39,20 @@ if nargin < 3; fixparams = []; end
 
 % if there are fixed parameters
 if ~isempty(fixparams)
-    nParams = length(theta) + size(fixparams,2);
+    nParams = length(Theta) + size(fixparams,2);
     nonfixedparamidx = 1:nParams;
     nonfixedparamidx(fixparams(1,:)) = [];
     
     temptheta = nan(1,nParams);
-    temptheta(nonfixedparamidx) = theta;
+    temptheta(nonfixedparamidx) = Theta;
     temptheta(fixparams(1,:)) = fixparams(2,:);
     
-    theta = temptheta;
+    Theta = temptheta;
 end
 
-tau=theta(1);
-lambda=theta(2);
-beta=theta(3);
+tau=Theta(1);
+lambda=Theta(2);
+beta=Theta(3);
 
 gvar = loadvar('gvar');
 
@@ -63,7 +63,9 @@ for ip = 1:nPs
     p = exppriorityVec(ip);
              
     % Compute optimal Jbar for this value of p_i
-    Jbar_optimal = fminsearch(@(pars) cost_function(pars,tau,lambda,beta,p,gvar), 1);
+    Jbar_optimal = fminsearch(@(pars) cost_function(pars,tau,lambda,beta,p), 1);
+    
+    
     % Compute probability of the subject's estimation errors under this value of Jbar_optimal
     J = discretize_gamma(Jbar_optimal,tau,gvar.n_gamma_bins);
     kappa = interp1(gvar.Jmap,gvar.kmap,min(J,max(gvar.Jmap)));
@@ -73,18 +75,10 @@ end
 % nLL = -sum(log(max(p_resp,1e-3)));
 
 % This function returns expected total cost for a given set of parameters and p_i value
-function E_C_total=cost_function(Jbar,tau,lambda,beta,p_i,gvar)
-J = discretize_gamma(Jbar,tau,gvar.n_gamma_bins);
-kappa = interp1(gvar.Jmap,gvar.kmap,min(J,max(gvar.Jmap)));
+function E_C_total=cost_function(Jbar,tau,lambda,beta,p_i)
 
-VM_x = linspace(-pi,pi,gvar.n_VM_bins);
-VM_x = VM_x(2:end)-diff(VM_x(1:2))/2;
-VM_y = exp(bsxfun(@times,kappa',cos(VM_x)));
-VM_y = bsxfun(@rdivide,VM_y,sum(VM_y,2));
-
-C_behavioral = abs(VM_x).^beta; 
-E_C_behavioral = mean(sum(bsxfun(@times,VM_y,C_behavioral),2)); 
-E_C_total = p_i*E_C_behavioral + lambda*Jbar; 
+E_BC = calc1_E_BC(Jbar, tau, beta); 
+E_C_total = p_i*E_BC + lambda*Jbar; 
 
 % This function discretizes a gamma distribution and returns bin centers
 function bins = discretize_gamma(Jbar,tau,nbins)
