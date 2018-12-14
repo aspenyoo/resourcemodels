@@ -35,6 +35,21 @@ function nLL = calc_nLL_RR(theta,data,exppriorityVec,fixparams)
 % 
 % edited from script from van den Berg & Ma, 2018. 
 
+if nargin < 3; fixparams = []; end
+
+% if there are fixed parameters
+if ~isempty(fixparams)
+    nParams = length(theta) + size(fixparams,2);
+    nonfixedparamidx = 1:nParams;
+    nonfixedparamidx(fixparams(1,:)) = [];
+    
+    temptheta = nan(1,nParams);
+    temptheta(nonfixedparamidx) = theta;
+    temptheta(fixparams(1,:)) = fixparams(2,:);
+    
+    theta = temptheta;
+end
+
 tau=theta(1);
 lambda=theta(2);
 beta=theta(3);
