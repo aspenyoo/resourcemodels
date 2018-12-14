@@ -1,4 +1,4 @@
-function expectederror = calc_E_BC_numerical(Theta,allocatedpriorityVec,exppriorityVec)
+function expectederror = calc_E_BC_numerical_ahy(Theta,allocatedpriorityVec,exppriorityVec)
 %CALC_E_BC calculates expected behavioral cost given parameters
 
 
@@ -48,15 +48,23 @@ end
 % This function returns expected total cost for a given set of parameters and p_i value
 function E_C_total=cost_function(Jbar,tau,lambda,gamma,p_i,gvar)
 % p(J|\bar{J},\tau)
-JVec = discretize_gamma(Jbar,tau,gvar.n_gamma_bins); % particular J values based on Jbar and tau
+% JVec = discretize_gamma(Jbar,tau,gvar.n_gamma_bins); % particular J values based on Jbar and tau
 
-dVec = loadvar('rVec');
+[JVec,dVec] = loadvar('JVec',{Jbar,tau},'rVec');
+
+% get Jpdf: p(J|Jbar,tau). 500 x 1 vector
+Jpdf = gampdf(JVec,Jbar/tau,tau); % probability of that J value
+Jpdf = Jpdf./sum(Jpdf);
 
 d_given_J = bsxfun(@(x,y) x.*y.*exp(-x^2.*y/2),dVec,JVec);
 
+% get dpdf (marginalize over J)
+dpdf = bsxfunandsum(@times,d_given_J,Jpdf);
+dpdf = dpdf./sum(dpdf);
+
 C_behavioral = dVec.^gamma;
-E_C_behavioral = mean(sum(bsxfun(@times,d_given_J,C_behavioral),2)); % expected cost (marginalized over actual error)
-E_C_total = p_i*E_C_behavioral + lambda*Jbar; % epected total cost
+E_C_behavioral = sum(C_behavioral .* dpdf); % expected cost (marginalized over actual error)
+E_C_total = p_i*E_C_behavioral + lambda*Jbar; % expected total cost
 
 %--------
 
@@ -75,10 +83,10 @@ E_C_total = p_i*E_C_behavioral + lambda*Jbar; % epected total cost
 % E_C_behavioral = mean(sum(bsxfun(@times,VM_y,C_behavioral),2)); % expected cost (marginalized over actual error)
 % E_C_total = p_i*E_C_behavioral + lambda*Jbar; % epected total cost
 
-% This function discretizes a gamma distribution and returns bin centers
-function bins = discretize_gamma(Jbar,tau,nbins)
-X = linspace(0,1,nbins+1);
-X = X(2:end)-diff(X(1:2))/2;
-warning off
-bins = gaminv(X,Jbar/tau,tau)';
-warning on
+% % This function discretizes a gamma distribution and returns bin centers
+% function bins = discretize_gamma(Jbar,tau,nbins)
+% X = linspace(0,1,nbins+1);
+% X = X(2:end)-diff(X(1:2))/2;
+% warning off
+% bins = gaminv(X,Jbar/tau,tau)';
+% warning on
