@@ -13,7 +13,7 @@ function [pVec, fval] = calc_pVec_minerror(Theta,exppriorityVec)
 nPriorities = length(exppriorityVec);
 
 % function for expected squared error
-calc_E_error = @(x) calc_expectederror_analytical(Theta,x,exppriorityVec);
+calc_E_error = @(x) calc_E_BC(Theta,x,exppriorityVec);
 
 % parameters for optimization
 Aeq = ones(1,nPriorities); 

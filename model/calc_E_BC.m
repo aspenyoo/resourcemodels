@@ -13,7 +13,9 @@ nPriorities = length(allocatedpriorityVec);
 E_C_total = 0;
 for ipriority = 1:nPriorities
     Jbar = Jbar_total*allocatedpriorityVec(ipriority);
-    p_i = exppriorityVec(ipriority);
-
-    E_C_total=E_C_total + p_i*calc1_E_BC([Jbar Theta(2:end)]);
+    if (Jbar) % if Jbar is 0, don't calculate anything
+        p_i = exppriorityVec(ipriority);
+        
+        E_C_total=E_C_total + p_i*calc1_E_BC(Jbar, tau, beta);
+    end
 end
