@@ -10,6 +10,11 @@ beta = Theta(end);
 
 nPriorities = length(allocatedpriorityVec);
 
+if (roundn(sum(allocatedpriorityVec),-4) ~= 1)
+    sprintf('allocated priority vector does not sum to 1. normalizing')
+    allocatedpriorityVec = allocatedpriorityVec./sum(allocatedpriorityVec);
+end
+
 E_C_total = 0;
 for ipriority = 1:nPriorities
     Jbar = Jbar_total*allocatedpriorityVec(ipriority);

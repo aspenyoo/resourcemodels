@@ -280,9 +280,10 @@ pVec_RR - pVec_ME
 clear all
 
 % two experiment priorities that should result in very different 
-exppriorityMat = [1/3 1/3 1/3;
-                   0.9 0.05 0.05;
-                   0.9 0.1 0]; % with one probe probablity = 0, drastically different predictions from RR model
+nItems = 4;
+exppriorityMat = [ones(1,nItems)./nItems;
+                   0.9 ones(1,nItems-1)*.1/(nItems-1);
+                   0.9 0.1 zeros(1,nItems-2)]; % with one probe probablity = 0, drastically different predictions from RR model
 nExps = size(exppriorityMat,1); % number of "experiments"
 
 % parameters chosen from realistic values in van den berg & ma, 2018.
@@ -291,9 +292,9 @@ lambda = 0.075;
 beta = 0.5; 
 
 % calculate the Jbar_total for RR for each priorityVec
-JbaroptMat = nan(nExps,3);
-for ip = 1:numel(exppriorityMat);    
-    JbaroptMat(ip) = calc_Jbar_optimal_RR([tau lambda beta], exppriorityMat(ip)); 
+JbaroptMat = nan(nExps,nItems);
+for ip = 1:numel(exppriorityMat);
+    JbaroptMat(ip) = calc_Jbar_optimal_RR([tau lambda beta], exppriorityMat(ip));
 end
 JbarOptVec = sum(JbaroptMat,2);
 
@@ -305,7 +306,7 @@ for iJbar = 1:nExps
     Jbar_total = JbarOptVec(iJbar); % assume Jbar_total is fixed
     theta = [Jbar_total tau beta];
     
-    pVec_ME{iJbar} = nan(nExps,3);
+    pVec_ME{iJbar} = nan(nExps,nItems);
     for iexp = 1:nExps
         exppriorityVec = exppriorityMat(iexp,:);
         pVec_ME{iJbar}(iexp,:) = calc_pVec_minerror(theta,exppriorityVec);
@@ -316,6 +317,7 @@ pVec_RR
 pVec_ME{1}
 pVec_ME{2}
 pVec_ME{3}
+
 %% calculate KL divergence
 sum(pVec_RR.*log(pVec_RR) - pVec_RR.*log(pVec_ME{1}),2)
 sum(pVec_RR.*log(pVec_RR) - pVec_RR.*log(pVec_ME{2}),2)

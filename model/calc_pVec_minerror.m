@@ -18,9 +18,9 @@ calc_E_error = @(x) calc_E_BC(Theta,x,exppriorityVec);
 % parameters for optimization
 Aeq = ones(1,nPriorities); 
 beq = 1; 
-A = diag(ones(1,nPriorities).*(-Theta(1)/Theta(2))); 
-b = -Theta(end)/2.*ones(nPriorities,1); 
-nonlcon = deal([]); 
+% A = diag(ones(1,nPriorities).*(-Theta(1)/Theta(2))); 
+% b = -Theta(end)/2.*ones(nPriorities,1); 
+[A,b,nonlcon] = deal([]); 
 options = optimset('Display','none'); 
 lb = 1e-3.*ones(1,nPriorities);
 ub = ones(1,nPriorities);
@@ -36,7 +36,7 @@ while size(x0,1) < nStartVals
     x0 = lhs(nStartVals+constantt,nPriorities-1,lbb,ubb,[],1e3); 
     x0 = [x0 1-sum(x0,2)];      % all priorities sum to 1
     idx = (x0(:,end) < lbb(1)); % delete x0's when they aren't within the bounds
-    x0(logical(idx),:) =[]; 
+    x0(logical(idx),:) = []; 
     constantt = constantt + sum(idx); 
 end
 

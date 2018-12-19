@@ -42,9 +42,13 @@ function E_C_total=cost_function(Jbar,tau,lambda,beta,p_i)
 % VM_y = bsxfun(@rdivide,VM_y,sum(VM_y,2));
 % 
 % C_behavioral = abs(VM_x).^beta;
-E_C_behavioral = calc1_E_BC(Jbar, tau, beta);
-% E_C_behavioral = mean(sum(bsxfun(@times,VM_y,C_behavioral),2));
-E_C_total = p_i*E_C_behavioral + lambda*Jbar;
+if (Jbar)
+    E_C_behavioral = calc1_E_BC(Jbar, tau, beta);
+    % E_C_behavioral = mean(sum(bsxfun(@times,VM_y,C_behavioral),2));
+    E_C_total = p_i*E_C_behavioral + lambda*Jbar;
+else
+    E_C_total = 0;
+end
 
 % % This function discretizes a gamma distribution and returns bin centers
 % function bins = discretize_gamma(Jbar,tau,nbins)
