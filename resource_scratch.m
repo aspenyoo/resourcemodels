@@ -281,9 +281,14 @@ clear all
 
 % two experiment priorities that should result in very different 
 nItems = 4;
-exppriorityMat = [ones(1,nItems)./nItems;
-                   0.9 ones(1,nItems-1)*.1/(nItems-1);
-                   0.9 0.1 zeros(1,nItems-2)]; % with one probe probablity = 0, drastically different predictions from RR model
+exppriorityMat = [  0.6  0.3   0.1     0;
+                    0.5 0.25 0.125 0.125;
+                    0.5  0.3   0.2   0.0];
+% exppriorityMat = [ones(1,nItems)./nItems;
+%                    0.7 ones(1,nItems-1)*.3/(nItems-1);
+%                    0.8 ones(1,nItems-1)*.2/(nItems-1);
+%                    0.9 ones(1,nItems-1)*.1/(nItems-1);
+%                    0.9 0.1 zeros(1,nItems-2)]; % with one probe probablity = 0, drastically different predictions from RR model
 nExps = size(exppriorityMat,1); % number of "experiments"
 
 % parameters chosen from realistic values in van den berg & ma, 2018.
@@ -314,11 +319,16 @@ for iJbar = 1:nExps
 end
 
 pVec_RR
-pVec_ME{1}
-pVec_ME{2}
-pVec_ME{3}
+for iJbar = 1:nExps
+    pVec_ME{iJbar}
+end
 
 %% calculate KL divergence
-sum(pVec_RR.*log(pVec_RR) - pVec_RR.*log(pVec_ME{1}),2)
-sum(pVec_RR.*log(pVec_RR) - pVec_RR.*log(pVec_ME{2}),2)
-sum(pVec_RR.*log(pVec_RR) - pVec_RR.*log(pVec_ME{3}),2)
+
+KLMat = nan(nExps);
+for iJbar = 1:nExps
+    KLMat(:,iJbar) = sum(pVec_RR.*log(pVec_RR) - pVec_RR.*log(pVec_ME{iJbar}),2);
+end
+
+
+% .02 for nItems = 4;
