@@ -4,10 +4,13 @@ h = figure(99);
 cmap = colormap('parula'); % get a rough colormap
 close(h)
 
-prioritysets = [0.6 0.3  0.1   0.0;
+prioritySets = [0.6 0.3  0.1   0.0;
                 0.5 0.25 0.125 0.125];
       
-            
+% experiment info
+settings.nTrials = 120;
+settings.nRuns = 10;
+
 % screen info
 screenDistance = 60;                      % distance between observer and Screen (in cm)
 screenHeight = 28.5;                        % height of screen (cm)
@@ -20,8 +23,8 @@ ppd = screenResolution(2) / screenAngle;  % pixels per degree
 settings.apertureSize = 12;                % radius of aperature (dva)            
 settings.bgColor = 125;
 settings.fgColor = 200;
-settings.minpriority = min(prioritysets(:));
-settings.maxpriority = max(prioritysets(:));
+settings.minpriority = min(prioritySets(:));
+settings.maxpriority = max(prioritySets(:));
 
 % stimulus info 
 fixationsize = 1;                     % fixation size (dva)
@@ -39,7 +42,7 @@ settings.screenCenter = screenCenter;
 settings.screenDistance = screenDistance;
 settings.screenAngle = screenAngle;
 settings.ppd = ppd;
-settings.prioritysets = prioritysets;
+settings.prioritySets = prioritySets;
 settings.cmap = cmap;
 
 end
