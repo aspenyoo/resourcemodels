@@ -1,12 +1,9 @@
-function drawFixation(windowPtr)
+function drawPrecue(windowPtr,priorityset)
 
 nPriorities = length(priorityset);
 
 % get experimental settings
 settings = getExperimentalSettings();
-cmap = settings.cmap;   % colormap
-nColors = size(cmap,1);     % number of unique colors in this continuum
-
 
 % screen settings
 center = settings.screenCenter;
@@ -25,20 +22,15 @@ fixationlinewidth = 4;                              % thickness of priority bars
 bordertopthickness = 1;                             % thickness of black border on priority bars (pixels)
 dotradius = 4;                                      % radius of center dot of fixation (pixels)
 dotrect = [center-dotradius center+dotradius];      % rect for center dot of fixation (pixels)
-% fixationsize = 30; % radius of fixation in pixels
+circlerect = [center-fixationsize center+fixationsize];
 
-% % open screen and get screen settings
-% screenNumber = max(Screen('Screens'));
-% topPriorityLevel = MaxPriority(screenNumber); %topPriorityLevel1 = MaxPriority(window);
-% Priority(topPriorityLevel);
-% [windowPtr, screenRect] = Screen('OpenWindow', screenNumber, [0 0 0]);
-Screen('BlendFunction', windowPtr, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-% [~, h] = Screen('WindowSize', windowPtr);
-
-
-% get colors for bars
+% color settings and variables
+cmap = settings.cmap;   % colormap
+nColors = size(cmap,1);     % number of unique colors in this continuum
 pVec = linspace(minpriority,maxpriority,nColors); % colors will correspond to these proportions
 
+
+% get colors and sizes for each quadrant
 colors = nan(3,2*nPriorities);
 xy = zeros(2,nPriorities*2);
 for ipriority = 1:nPriorities
@@ -50,20 +42,14 @@ for ipriority = 1:nPriorities
     
     xy(:,2*ipriority) = round(sqrt(2)/2*(fixationsize-dotradius)*priority.*quadrantdirection(ipriority,:));
 end
-colors = colors*255;
-% xyb = xy+(sqrt(2)/2*(dotradius+bordertopthickness))*sign(xy);
+colors = colors*255;                          % color coordinates from 0 to 255
 xy = xy + dotradius*sign(xy);                 % end coordinates of priority lines   
 xyb = xy + bordertopthickness*sign(xy);       % end coordintes for the black border
-% xy = xy+(sqrt(2)/2*dotradius)*sign(xy);
 
-circlerect = [center-fixationsize center+fixationsize];
-% Screen('fillRect',windowPtr,bgColor);       % background color
-% Screen('FillOval', windowPtr, 255, circlerect);    % white background circle fixation
+
+% plot precue
+Screen('BlendFunction', windowPtr, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 Screen('DrawLines', windowPtr, xyb, fixationlinewidth+2.5, 0, center, smoothline);          % priority lines
 Screen('DrawLines', windowPtr, xy, fixationlinewidth ,colors, center, smoothline);          % priority lines
 Screen('FillOval', windowPtr, 0, dotrect);
 Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
-% Screen('Flip', windowPtr);
-% 
-% pause;
-% sca

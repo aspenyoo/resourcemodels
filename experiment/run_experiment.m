@@ -20,9 +20,9 @@ try
     screenNumber = max(Screen('Screens'));
     topPriorityLevel = MaxPriority(screenNumber); %topPriorityLevel1 = MaxPriority(window);
     Priority(topPriorityLevel);
-    [window, screenRect] = Screen('OpenWindow', screenNumber, [0 0 0]);
-    Screen('BlendFunction', window, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    [~, h] = Screen('WindowSize', window);
+    [windowPtr, screenRect] = Screen('OpenWindow', screenNumber, [0 0 0]);
+    Screen('BlendFunction', windowPtr, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    [~, h] = Screen('WindowSize', windowPtr);
     [x_c, y_c] = RectCenter(screenRect);
     center = [x_c y_c];
     %    HideCursor;
@@ -56,13 +56,13 @@ try
     % Timing
     initlWaitOnStrtRecord = 1.9;
     fixExpnd_time=.1;
-    probzCue_time=.7;
+    probzCue_time=2;
     fixIntrvn_time=.1;
-    targts_time=.7;
-    theDelay_time=3;%10.8
+    targts_time=2;
+    theDelay_time=1;%10.8
     goCue_time=.8;
     feedBack_time=.8;
-    iti_times_time=[3 4.5 6];%[8.8 10 11.2];
+    iti_times_time=[1 1 1];%[8.8 10 11.2];
     
     % define keys to listen to
     KbName('UnifyKeyNames');
@@ -121,6 +121,82 @@ try
     trialStart=zeros(numbTrialsPerRun,1);
     delayStart=zeros(numbTrialsPerRun,1);
     trialEnd=zeros(numbTrialsPerRun,1);
+    
+    % =======================================================
+     % ASPEN STUFF BELOW
+    settings = getExperimentalSettings;
+    center = settings.screenCenter;
+    ppd = settings.ppd;
+    bgColor = settings.bgColor;
+    fgColor = settings.fgColor;
+    minpriority = settings.minpriority;
+    maxpriority = settings.maxpriority;
+    fixationsize = settings.fixationsize; % size of fixation (dva)
+    dotradius = settings.dotradius;          % radius of fixation dot (pixels)
+    stimulusecc = settings.stimulusecc*ppd;            % annulus stimulus eccentricity is on (pixels)
+    jitter = settings.jitter*ppd;               % uniform jitter distribution (pixels)
+    
+    fixationsize = fixationsize*ppd;         % size of fixation (pixels)
+    circlerect = [center-fixationsize center+fixationsize];
+    
+    dotrect = [center-dotradius center+dotradius];      % rect for center dot of fixation (pixels)
+    
+    black = 0;
+    % ====== MAKE DESIGN MATRIX ======
+    nItems = 4;
+    
+    % column meanings for designMat for nItems = 4
+    %   1-4: priorities of items in quadrant 1-4
+    %     5: priority of target
+    %   6-9: polar angle of items (radians)
+    % 10-13: x coordinates of items relative to center of screen (pixels)
+    % 14-17: x coordinates of items relative to center of screen (pixels)
+    
+    prioritySet = [0.6 0.3 0.1 0];
+    nonzeroPrioritySet = prioritySet(prioritySet~=0);
+    nNonzeroPriorities = length(nonzeroPrioritySet);
+    condmat = cell(1,nNonzeroPriorities);
+    for ipriority = 1:nNonzeroPriorities;
+        priority = nonzeroPrioritySet(ipriority);
+        tempmat = perms(prioritySet);       % all permutations of configurations
+        tempmat = [tempmat priority*ones(size(tempmat,1),1)]; % current priority is the target in all these trials
+        condmat{ipriority} = tempmat;
+    end
+    
+    % multiply the condmats according to priority
+    multiplier = roundn(nonzeroPrioritySet./min(nonzeroPrioritySet),-4);
+    % do something for the case that multiplier does not result in integers
+%     if (sum(round(multiplier) == multiplier) ~= nItems)
+%         sprintf('fuck')
+%     end
+    designMat = [];
+    for ipriority = 1:nNonzeroPriorities
+        tempmat = repmat(condmat{ipriority},multiplier(ipriority),1);
+        designMat = [designMat; tempmat];
+    end
+    nrowsDesignMat = size(designMat,1);
+    
+    % locations of items 
+    possibleAngles = (10:10:80)/180*pi;
+    randangles = possibleAngles(randi(length(possibleAngles),nrowsDesignMat,nItems));
+    randangles(:,2) = randangles(:,2)+pi/2;
+    randangles(:,3) = randangles(:,3)+pi;
+    randangles(:,4) = randangles(:,4)+3*pi/2;
+    designMat = [designMat randangles];
+    
+    % getting the correct number of trials
+    designMat = repmat(designMat,ceil(nTrials/nrowsDesignMat),1);
+    designMat(randperm(nrowsDesignMat),:) = designMat;
+    designMat = designMat(1:nTrials,:);
+    
+%     designMat = [.6 .3 .1 0 .6 pi/180*[20 110 200 290]];
+    % change to pixel locations (relative to center)
+    [X,Y] = pol2cart(designMat(:,end-nItems+1:end), stimulusecc);
+    X = X + (rand(size(X))-0.5)*jitter;
+    Y = Y + (rand(size(Y))-0.5)*jitter;
+    designMat = [designMat round(X) round(Y)];
+   
+    
     
     %% what needs to be done every 10th run
     if run==1 || run==11 || run==21 || run==31
@@ -266,11 +342,13 @@ try
         startTrial=(((preRun-1).*numbTrialsPerRun)+1);
         numTrials=startTrial+11;
     end
+    
+    
     %% Flip the window before start to get a gray screen
-    Screen('FillRect', window, darkgray);
+    Screen('FillRect', windowPtr, darkgray);
     %% Get EyeTracker and Provide info
     if do_el
-        el=EyelinkInitDefaults(window);
+        el=EyelinkInitDefaults(windowPtr);
         Eyelink('Initialize','PsychEyelinkDispatchCallback') % initialises the eyetracker
         status=Eyelink('command','link_sample_data = LEFT,RIGHT,GAZE,AREA');
         Eyelink('command', 'sample_rate = 500');
@@ -306,8 +384,7 @@ try
     %% #########################################################################%
     
     for trial=startTrial:numTrials
-        trialNum=sprintf('$ Trial %s $', num2str(trial));
-        disp(trialNum)
+
         %% Get Probabilities
         rowInd = allPrbz_prbz_quds_iti_anAngsTst(trial,:,1);% this is where you get the probabilities
         %% Gettingcorrect Probability to test from matrixOfProbz
@@ -339,17 +416,17 @@ try
         tarX=(testDot(1))./ppd; %want in degrees of visual angle
         tarY=(testDot(2))./ppd;
         %% Intro Screen
-        Screen('FillRect', window, black);
-        Screen('TextFont',window, 'Helvetica');
-        Screen('TextSize',window, 20);
-        Screen('TextStyle', window, 1+2);
+        Screen('FillRect', windowPtr, black);
+        Screen('TextFont',windowPtr, 'Helvetica');
+        Screen('TextSize',windowPtr, 20);
+        Screen('TextStyle', windowPtr, 1+2);
         if trial == startTrial
-            Screen('FillOval',window, darkgray, theAperture);
+            Screen('FillOval',windowPtr, darkgray, theAperture);
             runText=sprintf('This is Run %01.f \n', run);
             %DrawFormattedText(window, conclText,'center', 'center', white);
-            DrawFormattedText(window, [runText, 'Press the spacebar when you are ready to continue.'],'center', 'center', white);
+            DrawFormattedText(windowPtr, [runText, 'Press the spacebar when you are ready to continue.'],'center', 'center', white);
             % Show it
-            Screen('Flip',window);
+            Screen('Flip',windowPtr);
             %Wait for keyboard press:
             resp = 0;
             while resp == 0
@@ -370,21 +447,12 @@ try
                 Eyelink('Message','xDAT %i', 10);
             end
             %Draw Aperture
-            Screen('FillOval',window, darkgray, theAperture);
-            %Draw Circle
-            Screen('FrameArc',window, lightgray,positionOfMainCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-            %Draw fixation cross
-            Screen('DrawLine', window, lightgray, x_c, positionOfMainCircle(2), x_c, positionOfMainCircle(4), (fxationThick));
-            Screen('DrawLine', window, lightgray, positionOfMainCircle(1), y_c, positionOfMainCircle(3), y_c, fxationThick);
-            %Draw Center Dart Board
-            Screen('FrameArc',window, lightgray, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-            for drawDartBrd=1:length(startAngle);
-                Screen('FrameArc',window, lightgray, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-                Screen('FrameArc',window, lightgray, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-                Screen('FrameArc',window, lightgray, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            end
+            Screen('FillOval',windowPtr, darkgray, theAperture);
+            %Draw fixation 
+            Screen('FillOval', windowPtr, 0, dotrect);
+            Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
             % Show it:
-            Screen('Flip', window);
+            Screen('Flip', windowPtr);
             % Wait
             resp = 0;
             while (GetSecs-expStart(trial)) < initlWaitOnStrtRecord
@@ -399,6 +467,8 @@ try
             clear resp;
         end
         %$$$$$$ Stoped here with ESC  key implementation $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+        
+        
         %% 1st Screen: Fixation cross and circle expand
         %write to eyetrck data
         trialStart(trial)=GetSecs;
@@ -408,21 +478,12 @@ try
             Eyelink('Message','xDAT %i',1);
         end
         %Draw Aperture
-        Screen('FillOval',window, darkgray, theAperture);
-        %Draw Circle
-        Screen('FrameArc',window, lightgray,positionOfExpandedCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-        %Draw fixation cross
-        Screen('DrawLine', window, lightgray, x_c, positionOfExpandedCircle(2), x_c, positionOfExpandedCircle(4), (fxationThick));
-        Screen('DrawLine', window, lightgray, positionOfExpandedCircle(1), y_c, positionOfExpandedCircle(3), y_c, fxationThick);
-        %Draw Center Dart Board
-        Screen('FrameArc',window, lightgray, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-        for drawDartBrd=1:length(startAngle)
-            Screen('FrameArc',window, lightgray, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-        end
-        % Show it:
-        Screen('Flip', window);
+        Screen('FillOval',windowPtr, darkgray, theAperture);
+        %Draw fixation 
+        Screen('FillOval', windowPtr, black, dotrect);
+        Screen('FrameOval', windowPtr, black, [center-fixationsize-5 center+fixationsize+5], 2);    % circle fixation
+
+        Screen('Flip', windowPtr);
         % Wait
         %       resp = 0;
         %       while (GetSecs-trialStrt) < initlWaitOnStrtRecord
@@ -436,7 +497,9 @@ try
         %       end
         %       clear resp;
         WaitSecs(fixExpnd_time);
-        %% 2nd Screen: Fixation cross and probability wedges
+        
+        
+        %% 1b: precue
         %write to eyetrck data
         if do_el
             Eyelink('Message','TarX %s', num2str(0));
@@ -444,40 +507,16 @@ try
             Eyelink('Message','xDAT %i',2);
         end
         %Draw Aperture
-        Screen('FillOval',window, darkgray, theAperture);
-        %Draw Circle
-        Screen('FrameArc',window, lightgray,positionOfMainCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-        %Draw fixation cross
-        Screen('DrawLine', window, lightgray, x_c, positionOfMainCircle(2), x_c, positionOfMainCircle(4), (fxationThick));
-        Screen('DrawLine', window, lightgray, positionOfMainCircle(1), y_c, positionOfMainCircle(3), y_c, fxationThick);
-        %Draw Center Dart Board
-        Screen('FrameArc',window, semiBlack, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-        for drawDartBrd=1:length(startAngle)
-            Screen('FrameArc',window, semiBlack, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, semiBlack, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, semiBlack, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-        end
-        for makeSlices=1:length(newArangInd)
-            if newArangInd(makeSlices)==0
-            elseif newArangInd(makeSlices)==.10
-                Screen('FrameArc',window, white, wifi_InnerArcPosition, (startAngle(makeSlices)+deg1stSmllPizzaStrt), (sizeAngle(1)-deg1stSmllPizzaEnd), (fxationThick), (fxationThick));
-                Screen('FrameArc',window, white, wifi_secndArcPosition, (startAngle(makeSlices)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            elseif newArangInd(makeSlices)==.30
-                Screen('FrameArc',window, white, wifi_InnerArcPosition, (startAngle(makeSlices)+deg1stSmllPizzaStrt), (sizeAngle(1)-deg1stSmllPizzaEnd), (fxationThick), (fxationThick));
-                Screen('FrameArc',window, white, wifi_secndArcPosition, (startAngle(makeSlices)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-                Screen('FrameArc',window, white, wifi_thirdArcPosition, (startAngle(makeSlices)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            elseif newArangInd(makeSlices)==.60
-                Screen('FrameArc',window, white, wifi_InnerArcPosition, (startAngle(makeSlices)+deg1stSmllPizzaStrt), (sizeAngle(1)-deg1stSmllPizzaEnd), (fxationThick), (fxationThick));
-                Screen('FrameArc',window, white, wifi_secndArcPosition, (startAngle(makeSlices)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-                Screen('FrameArc',window, white, wifi_thirdArcPosition, (startAngle(makeSlices)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-                Screen('FrameArc',window, white, wifi_OuterArcPosition, (startAngle(makeSlices)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            end
-        end
+        Screen('FillOval',windowPtr, darkgray, theAperture);
+        %Draw fixation 
+        drawPrecue(windowPtr,[0.6 0.3 0.1 0.0])
         % Show it:
-        Screen('Flip', window);
+        Screen('Flip', windowPtr);
         % Wait
         WaitSecs(probzCue_time);
-        %% 3rd Screen: fixation cross
+        
+        
+        %% 1c: fixation circle
         %write to eyetrck data
         if do_el
             Eyelink('Message','TarX %s', num2str(0));
@@ -485,53 +524,38 @@ try
             Eyelink('Message','xDAT %i',3);
         end
         %Draw Aperture
-        Screen('FillOval',window, darkgray, theAperture);
-        %Draw Circle
-        Screen('FrameArc',window, lightgray,positionOfMainCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-        %Draw fixation cross
-        Screen('DrawLine', window, lightgray, x_c, positionOfMainCircle(2), x_c, positionOfMainCircle(4), (fxationThick));
-        Screen('DrawLine', window, lightgray, positionOfMainCircle(1), y_c, positionOfMainCircle(3), y_c, fxationThick);
-        %Draw Center Dart Board
-        Screen('FrameArc',window, lightgray, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-        for drawDartBrd=1:length(startAngle)
-            Screen('FrameArc',window, lightgray, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-        end      % Show it:
-        Screen('Flip', window);
+        Screen('FillOval',windowPtr, darkgray, theAperture);
+        %Draw fixation 
+        Screen('FillOval', windowPtr, 0, dotrect);
+        Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
+        Screen('Flip', windowPtr);
         % Wait
         WaitSecs(fixIntrvn_time);
-        %% 4th Screen: fixation cross and targets
+        
+        %% 2: targets appear
         %write to eyetrck data
         if do_el
             Eyelink('Message','TarX %s', num2str(0));
             Eyelink('Message','TarY %s', num2str(0));
             Eyelink('Message','xDAT %i',4);
         end
+        
+        % item info
+        items_xy = [designMat(trial,2*nItems+1+(1:nItems)); designMat(trial,3*nItems+1+(1:nItems))];
+        
         %Draw Aperture
-        Screen('FillOval',window, darkgray, theAperture);
-        %Draw Circle
-        Screen('FrameArc',window, lightgray,positionOfMainCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-        %Draw fixation cross
-        Screen('DrawLine', window, lightgray, x_c, positionOfMainCircle(2), x_c, positionOfMainCircle(4), (fxationThick));
-        Screen('DrawLine', window, lightgray, positionOfMainCircle(1), y_c, positionOfMainCircle(3), y_c, fxationThick);
-        %Draw Center Dart Board
-        Screen('FrameArc',window, lightgray, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-        for drawDartBrd=1:length(startAngle)
-            Screen('FrameArc',window, lightgray, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-        end
+        Screen('FillOval',windowPtr, darkgray, theAperture);
+        %Draw fixation 
+        Screen('FillOval', windowPtr, 0, dotrect);
+        Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
         %Draw Dots
-        Screen('DrawDots', window, pixLocOfdots(:,trial,1), dot_s, white, center,1);
-        Screen('DrawDots', window, pixLocOfdots(:,trial,2), dot_s, white, center,1);
-        Screen('DrawDots', window, pixLocOfdots(:,trial,3), dot_s, white, center,1);
-        Screen('DrawDots', window, pixLocOfdots(:,trial,4), dot_s, white, center,1);
+        Screen('DrawDots', windowPtr, items_xy, repmat(dot_s,1,nItems), repmat(white,1,nItems), center,1);
         % Show it:
-        Screen('Flip', window);
+        Screen('Flip', windowPtr);
         % Wait
         WaitSecs(targts_time);
-        %% 5th Screen: Delay
+        
+        %% 3: delay
         %write to eyetrck data
         if do_el
             Eyelink('Message','TarX %s', num2str(0));
@@ -539,78 +563,67 @@ try
             Eyelink('Message','xDAT %i',5);
         end
         %Draw Aperture
-        Screen('FillOval',window, darkgray, theAperture);
-        %Draw Circle
-        Screen('FrameArc',window, lightgray,positionOfMainCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-        %Draw fixation cross
-        Screen('DrawLine', window, lightgray, x_c, positionOfMainCircle(2), x_c, positionOfMainCircle(4), (fxationThick));
-        Screen('DrawLine', window, lightgray, positionOfMainCircle(1), y_c, positionOfMainCircle(3), y_c, fxationThick);
-        %Draw Center Dart Board
-        Screen('FrameArc',window, lightgray, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-        for drawDartBrd=1:length(startAngle)
-            Screen('FrameArc',window, lightgray, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-        end
-        % Show it:
-        Screen('Flip', window);
+        Screen('FillOval',windowPtr, darkgray, theAperture);
+        %Draw fixation 
+        Screen('FillOval', windowPtr, 0, dotrect);
+        Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
+
+        Screen('Flip', windowPtr);
         delayStart(trial)=GetSecs;
         % Delay
         WaitSecs(theDelay_time);
-        %% 6th Screen: Test Cue (response)
+        
+        
+        %% 4: test cue appears (response)
         %write target location to eyetrck data
         if do_el
             Eyelink('Message','TarX %s', num2str(tarX));
             Eyelink('Message','TarY %s', num2str(tarY));
             Eyelink('Message','xDAT %i',6);
         end
+        
+        % get target info
+        targetQuad = find(designMat(trial,1:nItems)==designMat(trial,nItems+1));
+        
         %Draw Aperture
-        Screen('FillOval',window, darkgray, theAperture);
-        %Draw Circle
-        Screen('FrameArc',window, lightgray,positionOfMainCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-        %Draw fixation cross
-        Screen('DrawLine', window, lightgray, x_c, positionOfMainCircle(2), x_c, positionOfMainCircle(4), (fxationThick));
-        Screen('DrawLine', window, lightgray, positionOfMainCircle(1), y_c, positionOfMainCircle(3), y_c, fxationThick);
-        %Draw Center Dart Board
-        Screen('FrameArc',window, lightgray, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-        for drawDartBrd=1:length(startAngle)
-            Screen('FrameArc',window, lightgray, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-        end
+        Screen('FillOval',windowPtr, darkgray, theAperture);
+        %Draw fixation 
+        Screen('FillOval', windowPtr, 0, dotrect);
+        Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
+        
         %Quadrant test
-        Screen('FrameArc',window, white,positionOfCircleForOuterWedge,quadTested,sizeAngle(1),(outrTstWedgThick*ppd),(outrTstWedgThick*ppd));
+        Screen('FrameArc',windowPtr,white, circlerect,90*targetQuad,90,4);
         % Show it:
-        Screen('Flip', window);
+        Screen('Flip', windowPtr);
         % Wait
         WaitSecs(goCue_time);
-        %% 7th Screen: Feedback (test target actual location)
+        
+        
+        %% 5: feedback (test target actual location)
         %write target location to eyetrck data
         if do_el
             Eyelink('Message','TarX %s', num2str(tarX));
             Eyelink('Message','TarY %s', num2str(tarY));
             Eyelink('Message','xDAT %i',7);
         end
+        
+        % get target info
+        target_xy = [designMat(trial,2*nItems+1+targetQuad); designMat(trial,3*nItems+1+targetQuad)];
+%         targetAngle = designMat(trial,nItems+1+targetQuad);
+        
         %Draw Aperture
-        Screen('FillOval',window, darkgray, theAperture);
-        %Draw Circle
-        Screen('FrameArc',window, lightgray,positionOfMainCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-        %Draw fixation cross
-        Screen('DrawLine', window, lightgray, x_c, positionOfMainCircle(2), x_c, positionOfMainCircle(4), (fxationThick));
-        Screen('DrawLine', window, lightgray, positionOfMainCircle(1), y_c, positionOfMainCircle(3), y_c, fxationThick);
-        %Draw Center Dart Board
-        Screen('FrameArc',window, lightgray, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-        for drawDartBrd=1:length(startAngle)
-            Screen('FrameArc',window, lightgray, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-        end
+        Screen('FillOval',windowPtr, darkgray, theAperture);
+        %Draw fixation 
+        Screen('FillOval', windowPtr, 0, dotrect);
+        Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
         %Draw Test Dot
-        Screen('DrawDots', window, testDot, dot_s, white, center,1);
+        Screen('DrawDots', windowPtr, target_xy, dot_s, white, center,1);
         % Show it:
-        Screen('Flip', window);
+        Screen('Flip', windowPtr);
         %wait
         WaitSecs(feedBack_time);
+        
+        
         %% 8th ITI
         %write to eyetrck data
         if do_el
@@ -619,29 +632,22 @@ try
             Eyelink('Message','xDAT %i',8);
         end
         %Draw Aperture
-        Screen('FillOval',window, darkgray, theAperture);
-        %Draw Circle
-        Screen('FrameArc',window, lightgray,positionOfMainCircle,startAngle(1),sizeAngle(5),(fxationThick), (fxationThick));
-        %Draw fixation cross
-        Screen('DrawLine', window, lightgray, x_c, positionOfMainCircle(2), x_c, positionOfMainCircle(4), (fxationThick));
-        Screen('DrawLine', window, lightgray, positionOfMainCircle(1), y_c, positionOfMainCircle(3), y_c, fxationThick);
-        %Draw Center Dart Board
-        Screen('FrameArc',window, lightgray, wifi_InnerArcPosition, startAngle(1), sizeAngle(5), (fxationThick), (fxationThick));
-        for drawDartBrd=1:length(startAngle)
-            Screen('FrameArc',window, lightgray, wifi_secndArcPosition, (startAngle(drawDartBrd)+deg2ndSmllPizzaStrt), (sizeAngle(1)-deg2ndSmllPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_thirdArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-            Screen('FrameArc',window, lightgray, wifi_OuterArcPosition, (startAngle(drawDartBrd)+degPizzaStart), (sizeAngle(1)-degPizzaEnd), (pizzaSliceThick), (pizzaSliceThick));
-        end
-        % Show it:
-        Screen('Flip', window);
+        Screen('FillOval',windowPtr, darkgray, theAperture);
+        %Draw fixation 
+        Screen('FillOval', windowPtr, 0, dotrect);
+        Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
+
+        Screen('Flip', windowPtr);
         % Wait
         WaitSecs(allPrbz_prbz_quds_iti_anAngsTst(trial,1,4));
-        trialEnd(trial)=GetSecs;
+        trialEnd(trial) = GetSecs;
         trialTime=trialEnd(trial)-trialStart(trial);
         if do_el
             eyeTend=Eyelink('TrackerTime');
             trackerTime=eyeTend-eyeTstrt;
         end
+        
+        
         %% Save the data for Trial #
         %location of tested dot in degrees
         outputMatrix(trial,1)=tarX;
@@ -714,11 +720,11 @@ try
     %% Close .csv
     fclose(fid); %close file stream
     %% Conclusion Screen
-    Screen('FillRect', window, black);
-    Screen('FillOval',window, darkgray, theAperture);
+    Screen('FillRect', windowPtr, black);
+    Screen('FillOval',windowPtr, darkgray, theAperture);
     conclText=sprintf('Run %01.f is over.', run);
-    DrawFormattedText(window, conclText,'center', 'center', white);
-    Screen('Flip',window);
+    DrawFormattedText(windowPtr, conclText,'center', 'center', white);
+    Screen('Flip',windowPtr);
     %% Stop ET Recording
     if do_el
         Eyelink('stoprecording');
