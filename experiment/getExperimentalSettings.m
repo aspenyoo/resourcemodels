@@ -17,7 +17,7 @@ screenResolution = [w h];                 % Screen resolution
 screenCenter = screenResolution/2;       % Screen center
 screenAngle = 2*(atand((screenHeight/2) / screenDistance)) ; % total visual angle of Screen
 ppd = screenResolution(2) / screenAngle;  % pixels per degree
-            
+settings.apertureSize = 12;                % radius of aperature (dva)            
 settings.bgColor = 125;
 settings.fgColor = 200;
 settings.minpriority = min(prioritysets(:));
