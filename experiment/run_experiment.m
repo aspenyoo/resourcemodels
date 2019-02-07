@@ -83,7 +83,12 @@ try
     itemrad = 0.2;                                % radius of item (dva)
     itemsize = itemrad * ppd;                     % size of items (pixels)
     
-    filename = sprintf('%s_pricond%d_designMat.mat',subjectID,iset);
+    % create folder for subjectID if it doesn't exist
+    folderDir = sprintf('output/%s/',subjectID);
+    if ~exist(folderDir,'dir')
+        mkdir(folderDir)
+    end
+    filename = sprintf('%s%s_pricond%d_designMat.mat',folderDir,subjectID,iset);
     if (run == 1) % if first run
         
         % ====== MAKE DESIGN MATRIX ======
@@ -97,7 +102,7 @@ try
         nonzeroPrioritySet = prioritySet(prioritySet~=0);
         nNonzeroPriorities = length(nonzeroPrioritySet);
         condmat = cell(1,nNonzeroPriorities);
-        for ipriority = 1:nNonzeroPriorities;
+        for ipriority = 1:nNonzeroPriorities
             priority = nonzeroPrioritySet(ipriority);
             tempmat = perms(prioritySet);       % all permutations of configurations
             tempmat = [tempmat priority*ones(size(tempmat,1),1)]; % current priority is the target in all these trials
@@ -161,11 +166,7 @@ try
             error('link_sample_data error, status: ',status)
         end
         %get gaze data from EyeTracker
-        if 1==numel(num2str(run))
-            edfFile=sprintf('ED_%g_0%g.edf', subjectID, run);
-        else
-            edfFile=sprintf('ED_%g_%g.edf', subjectID, run);
-        end
+        edfFile=sprintf('%seyedata_%s_%02d.edf', folderDir, subjectID, run);
         Eyelink('openfile',edfFile);
     end
     
@@ -199,7 +200,7 @@ try
     end
     %Draw Aperture
     Screen('FillOval',windowPtr, darkgray, apertureRect);
-    %Draw fixation
+    %Draw fixations
     Screen('FillOval', windowPtr, 0, dotrect);
     Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
     % Show it:
@@ -308,24 +309,28 @@ try
         
         
         % =========== 6: test cue appears (response) ==========
-        %write target location to eyetrck data
-        if do_el
-            Eyelink('Message','TarX %s', num2str(tarX));
-            Eyelink('Message','TarY %s', num2str(tarY));
-            Eyelink('Message','xDAT %i',6);
-        end
         
         % get target info
         targetQuad = find(designMat(itrial,1:nItems)==designMat(itrial,nItems+1));
-        if (length(targetQuad)>1)
+        if (length(targetQuad)>1) % in cases where there are two targets with same priority
             targetQuad = targetQuad(ceil(rand*length(targetQuad)));
         end
+        
+        % get target info
+        target_xy = [designMat(itrial,2*nItems+1+targetQuad); designMat(itrial,3*nItems+1+targetQuad)];
+        
+        %write target location to eyetrck data
+        if do_el
+            Eyelink('Message','TarX %s', num2str(target_xy(1)/ppd));
+            Eyelink('Message','TarY %s', num2str(target_xy(2)/ppd));
+            Eyelink('Message','xDAT %i',6);
+        end
+        
         %Draw Aperture
         Screen('FillOval',windowPtr, darkgray, apertureRect);
         %Draw fixation
         Screen('FillOval', windowPtr, 0, dotrect);
         Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
-        
         %Quadrant test
         Screen('FrameArc',windowPtr,white, circlerect,90*targetQuad,90,4);
         % Show it:
@@ -337,13 +342,10 @@ try
         % =========== 7: feedback (test target actual location) =========
         %write target location to eyetrck data
         if do_el
-            Eyelink('Message','TarX %s', num2str(tarX));
-            Eyelink('Message','TarY %s', num2str(tarY));
+            Eyelink('Message','TarX %s', num2str(target_xy(1)/ppd));
+            Eyelink('Message','TarY %s', num2str(target_xy(2)/ppd));
             Eyelink('Message','xDAT %i',7);
         end
-        
-        % get target info
-        target_xy = [designMat(itrial,2*nItems+1+targetQuad); designMat(itrial,3*nItems+1+targetQuad)];
         
         %Draw Aperture
         Screen('FillOval',windowPtr, darkgray, apertureRect);
@@ -371,14 +373,15 @@ try
         Screen('FillOval', windowPtr, 0, dotrect);
         Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
         
-        Screen('Flip', windowPtr, time_ITI);
+        Screen('Flip', windowPtr);
+        WaitSecs(time_ITI);
         %         trialEnd(itrial) = GetSecs;
         %         trialTime=trialEnd(itrial)-trialStart(itrial);
         if do_el
             eyeTend=Eyelink('TrackerTime');
             trackerTime=eyeTend-eyeTstrt;
         end
-        
+         
         %save output matrix
         save(filename,'designMat','trial')
         trial = trial+1;
@@ -410,4 +413,4 @@ catch
     ShowCursor;
     Screen('CloseAll'); % AKA (sca)
     psychrethrow(psychlasterror);
-end;
+end
