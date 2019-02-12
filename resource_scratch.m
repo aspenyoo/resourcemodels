@@ -1,3 +1,29 @@
+%% testing out precue
+clear all
+
+priorityset = [0.5 0.25 0.125 0.125];
+
+% open screen
+screenNumber = max(Screen('Screens'));
+[windowPtr] = Screen('OpenWindow', screenNumber, [0 0 0]);
+Screen('BlendFunction', windowPtr, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+[w, h]=Screen('WindowSize', screenNumber);  % Screen resolution
+screenResolution = [w h];                 % Screen resolution
+center = screenResolution/2;       % Screen center
+
+% get stuff for aperature
+apertureSize= 400;
+apertureRect = [center-apertureSize center+apertureSize];
+
+% draw stuffs
+Screen('FillOval',windowPtr, 115, apertureRect);
+% drawPrecue_old(windowPtr,priorityset)
+drawPrecue(windowPtr,priorityset)
+
+Screen('Flip',windowPtr);
+pause;
+sca
+
 %% gamma distribution
 
 clear all

@@ -166,7 +166,7 @@ try
             error('link_sample_data error, status: ',status)
         end
         %get gaze data from EyeTracker
-        edfFile=sprintf('%seyedata_%s_%02d.edf', folderDir, subjectID, run);
+        edfFile=sprintf('%seyedata_%s_run%02d.edf', folderDir, subjectID, run);
         Eyelink('openfile',edfFile);
     end
     
@@ -398,7 +398,8 @@ try
     if do_el
         Eyelink('stoprecording');
         %Eyelink('closefile');
-        Eyelink('ReceiveFile',edfFile,pwd,1);
+        %         Eyelink('ReceiveFile',edfFile,pwd,1);
+        Eyelink('Receivefile',edfFile,edfFile);
         Eyelink('Shutdown')
     end
     
