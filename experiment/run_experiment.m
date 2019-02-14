@@ -151,23 +151,32 @@ try
     % Get EyeTracker and Provide info
     if do_el
         el=EyelinkInitDefaults(windowPtr);
+        
         Eyelink('Initialize','PsychEyelinkDispatchCallback') % initialises the eyetracker
-        status=Eyelink('command','link_sample_data = LEFT,RIGHT,GAZE,AREA');
-        Eyelink('command', 'sample_rate = 500');
-        Eyelink('command','calibration_type=HV9');% updating number of callibration dots
-        Eyelink('command', 'enable_automatic_calibration = YES');
-        Eyelink('command','file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
-        Eyelink('command','file_sample_data  = LEFT,RIGHT,GAZE,AREA,GAZERES,STATUS');
-        % s=Eyelink('command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, p.scr_rect(3)-1,p.scr_rect(4)-1);
-        % s=Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, p.scr_rect(3)-1,p.scr_rect(4)-1);
+        Eyelink('command','calibration_type=HV13'); % updating number of callibration dots
+        s=Eyelink('command','link_sample_data = LEFT,RIGHT,GAZE,AREA');% (,GAZERES,HREF,PUPIL,STATUS,INPUT');
+        s=Eyelink('command', 'sample_rate = 1000');
+        s=Eyelink('command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, settings.screenResolution(1)-1,settings.screenResolution(2)-1);
+        s=Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, settings.screenResolution(1)-1,settings.screenResolution(2)-1);
+        
+%         Eyelink('Initialize','PsychEyelinkDispatchCallback') % initialises the eyetracker
+%         status=Eyelink('command','link_sample_data = LEFT,RIGHT,GAZE,AREA');
+%         Eyelink('command', 'sample_rate = 500');
+%         Eyelink('command','calibration_type=HV9');% updating number of callibration dots
+%         Eyelink('command', 'enable_automatic_calibration = YES');
+%         Eyelink('command','file_event_filter = LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON');
+%         Eyelink('command','file_sample_data  = LEFT,RIGHT,GAZE,AREA,GAZERES,STATUS');
+%         % s=Eyelink('command','screen_pixel_coords = %ld %ld %ld %ld', 0, 0, p.scr_rect(3)-1,p.scr_rect(4)-1);
+%         % s=Eyelink('message', 'DISPLAY_COORDS %ld %ld %ld %ld', 0, 0, p.scr_rect(3)-1,p.scr_rect(4)-1);
         %Calibrate the eye tracker
         EyelinkDoTrackerSetup(el);
-        if status~=0
-            error('link_sample_data error, status: ',status)
+        if s~=0
+            error('link_sample_data error, status: ',s)
         end
-        %get gaze data from EyeTracker
+        %get gaze data from 
         edfFile=sprintf('%seyedata_%s_run%02d.edf', folderDir, subjectID, run);
-        Eyelink('openfile',edfFile);
+        tempfilename = 'blah.edf';
+        Eyelink('openfile',tempfilename);
     end
     
     
@@ -220,6 +229,7 @@ try
             Eyelink('Message','TarX %s', num2str(0));
             Eyelink('Message','TarY %s', num2str(0));
             Eyelink('Message','xDAT %i',1);
+            Eyelink('command', 'record_status_message "TRIAL %d of %d"', itrial, nTrialsPerRun*run); 
         end
         %Draw Aperture
         Screen('FillOval',windowPtr, darkgray, apertureRect);
@@ -234,8 +244,8 @@ try
         % =============== 2: precue ===============
         %write to eyetrck data
         if do_el
-            Eyelink('Message','TarX %s', num2str(0));
-            Eyelink('Message','TarY %s', num2str(0));
+%             Eyelink('Message','TarX %s', num2str(0));
+%             Eyelink('Message','TarY %s', num2str(0));
             Eyelink('Message','xDAT %i',2);
         end
         %Draw Aperture
@@ -251,8 +261,8 @@ try
         % ============= 3: fixation circle ==============
         %write to eyetrck data
         if do_el
-            Eyelink('Message','TarX %s', num2str(0));
-            Eyelink('Message','TarY %s', num2str(0));
+%             Eyelink('Message','TarX %s', num2str(0));
+%             Eyelink('Message','TarY %s', num2str(0));
             Eyelink('Message','xDAT %i',3);
         end
         %Draw Aperture
@@ -268,8 +278,8 @@ try
         % ============== 4: targets appear ================
         %write to eyetrck data
         if do_el
-            Eyelink('Message','TarX %s', num2str(0));
-            Eyelink('Message','TarY %s', num2str(0));
+%             Eyelink('Message','TarX %s', num2str(0));
+%             Eyelink('Message','TarY %s', num2str(0));
             Eyelink('Message','xDAT %i',4);
         end
         
@@ -292,8 +302,8 @@ try
         % ============== 5: delay =============
         %write to eyetrck data
         if do_el
-            Eyelink('Message','TarX %s', num2str(0));
-            Eyelink('Message','TarY %s', num2str(0));
+%             Eyelink('Message','TarX %s', num2str(0));
+%             Eyelink('Message','TarY %s', num2str(0));
             Eyelink('Message','xDAT %i',5);
         end
         %Draw Aperture
@@ -324,6 +334,7 @@ try
             Eyelink('Message','TarX %s', num2str(target_xy(1)/ppd));
             Eyelink('Message','TarY %s', num2str(target_xy(2)/ppd));
             Eyelink('Message','xDAT %i',6);
+            Eyelink('command', 'record_status_message "TRIAL %d of %d"', itrial, nTrialsPerRun*run); 
         end
         
         %Draw Aperture
@@ -342,8 +353,8 @@ try
         % =========== 7: feedback (test target actual location) =========
         %write target location to eyetrck data
         if do_el
-            Eyelink('Message','TarX %s', num2str(target_xy(1)/ppd));
-            Eyelink('Message','TarY %s', num2str(target_xy(2)/ppd));
+%             Eyelink('Message','TarX %s', num2str(target_xy(1)/ppd));
+%             Eyelink('Message','TarY %s', num2str(target_xy(2)/ppd));
             Eyelink('Message','xDAT %i',7);
         end
         
@@ -366,6 +377,7 @@ try
             Eyelink('Message','TarX %s', num2str(0));
             Eyelink('Message','TarY %s', num2str(0));
             Eyelink('Message','xDAT %i',8);
+            Eyelink('command', 'record_status_message "TRIAL %d of %d"', itrial, nTrialsPerRun*run); 
         end
         %Draw Aperture
         Screen('FillOval',windowPtr, darkgray, apertureRect);
@@ -396,11 +408,10 @@ try
     
     % Stop ET Recording
     if do_el
-        Eyelink('stoprecording');
-        %Eyelink('closefile');
-        %         Eyelink('ReceiveFile',edfFile,pwd,1);
-        Eyelink('Receivefile',edfFile,edfFile);
-        Eyelink('Shutdown')
+        Eyelink('StopRecording');
+        Eyelink('ReceiveFile',tempfilename,tempfilename);
+        movefile(tempfilename,edfFile);
+        Eyelink('ShutDown');
     end
     
     %Wait
