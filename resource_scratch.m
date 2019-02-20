@@ -1,3 +1,13 @@
+% this script is a composite of random things involved in exploring,
+% analyzing, and displaying data, model, and model fits. It is generally
+% organized in terms of data related and model related sections, although
+% each section is a bunch of random things I did. 
+
+%% ==================================================================
+%                       DATA RELATED
+% ===================================================================
+
+
 %% testing out precue
 clear all
 
@@ -23,6 +33,74 @@ drawPrecue(windowPtr,priorityset)
 Screen('Flip',windowPtr);
 pause;
 sca
+
+%% look at eye data
+
+clear all; close all
+% addpath(genpath('/Volumes/data/Pri_quad'))
+
+subjid = 'TST';
+% subjVec = {'AB','AY','CC','EK','KD','MR','MSR'};
+% nSubj = length(subjVec);
+
+% put it in format
+ifg_fn = '~/Documents/MATLAB/iEye_ts/examples/p_500hz.ifg';
+
+ii_params = ii_loadparams; % load default set of analysis parameters, only change what we have to
+
+ii_params.trial_end_value = 8;   % XDAT value for trial end
+ii_params.drift_epoch = 1:5; % XDAT values for drift correction
+ii_params.calibrate_epoch = 7 ;   % XDAT value for when we calibrate (feedback stim)
+ii_params.calibrate_select_mode = 'last'; % how do we select fixation with which to calibrate?
+ii_params.calibrate_mode = 'scale'; % scale: trial-by-trial, rescale each trial; 'run' - run-wise polynomial fit
+ii_params.blink_window = [200 200]; % how long before/after blink (ms) to drop?
+ii_params.plot_epoch = 1:8;  % what epochs do we plot for preprocessing?
+ii_params.calibrate_limits = 2.5; % when amount of adj exceeds this, don't actually calibrate (trial-wise); ignore trial for polynomial fitting (run)
+ii_params.ppd = 31.8578; % for scanner, 1280 x 1024 - convert pix to DVA
+
+edf_prefix = 'eyedata_';
+
+
+% files
+root = '.';
+% root = sprintf('/Volumes/data/Pri_quad/behavior/eyetracking/%s/',subjid);
+edf_files = dir(fullfile(root,sprintf('%s*.edf',edf_prefix)));
+
+% create empty cell array of all our trial data for combination later on
+ii_trial = cell(length(edf_files),1);
+
+for ifile = 1:length(edf_files)
+    
+    % what is the output filename?
+    preproc_fn = sprintf('%sop%s_preproc.mat',root,edf_files(ifile).name(1:(end-4)));
+    
+    
+    [ii_data, ii_cfg, ii_sacc] = ii_preproc(fullfile(root,edf_files(ifile).name),ifg_fn,preproc_fn,ii_params);
+    
+    if ifile == 1
+        % plot some features of the data
+        % (check out the docs for each of these; lots of options...)
+        ii_plottimeseries(ii_data,ii_cfg); % pltos the full timeseries
+        
+        ii_plotalltrials(ii_data,ii_cfg); % plots each trial individually
+        
+        ii_plotalltrials2d(ii_data,ii_cfg); % plots all trials, in 2d, overlaid on one another w/ fixations
+    end
+    
+    % score trials
+    % default parameters should work fine - but see docs for other
+    % arguments you can/should give when possible
+    [ii_trial{ifile},~] = ii_scoreMGS(ii_data,ii_cfg,ii_sacc);
+    
+end
+%     ii_sess = ii_combineruns(ii_trial);
+%     save(sprintf('%s%s_ii_sess.mat',root,subjid),'ii_sess')
+
+
+
+%% ==================================================================
+%                   MODEL RELATED
+% ===================================================================
 
 %% gamma distribution
 
