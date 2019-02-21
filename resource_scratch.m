@@ -4,7 +4,7 @@
 % each section is a bunch of random things I did. 
 
 %% ==================================================================
-%                       DATA RELATED
+%                       EXPERIMENT RELATED
 % ===================================================================
 
 
@@ -33,6 +33,9 @@ drawPrecue(windowPtr,priorityset)
 Screen('Flip',windowPtr);
 pause;
 sca
+%% ==================================================================
+%                       DATA RELATED
+% ===================================================================
 
 %% look at eye data
 
@@ -77,15 +80,15 @@ for ifile = 1:length(edf_files)
     
     [ii_data, ii_cfg, ii_sacc] = ii_preproc(fullfile(root,edf_files(ifile).name),ifg_fn,preproc_fn,ii_params);
     
-    if ifile == 1
-        % plot some features of the data
-        % (check out the docs for each of these; lots of options...)
-        ii_plottimeseries(ii_data,ii_cfg); % pltos the full timeseries
-        
-        ii_plotalltrials(ii_data,ii_cfg); % plots each trial individually
-        
-        ii_plotalltrials2d(ii_data,ii_cfg); % plots all trials, in 2d, overlaid on one another w/ fixations
-    end
+%     if ifile == 1
+%         % plot some features of the data
+%         % (check out the docs for each of these; lots of options...)
+%         ii_plottimeseries(ii_data,ii_cfg); % pltos the full timeseries
+%         
+%         ii_plotalltrials(ii_data,ii_cfg); % plots each trial individually
+%         
+%         ii_plotalltrials2d(ii_data,ii_cfg); % plots all trials, in 2d, overlaid on one another w/ fixations
+%     end
     
     % score trials
     % default parameters should work fine - but see docs for other
@@ -93,10 +96,60 @@ for ifile = 1:length(edf_files)
     [ii_trial{ifile},~] = ii_scoreMGS(ii_data,ii_cfg,ii_sacc);
     
 end
-%     ii_sess = ii_combineruns(ii_trial);
+    ii_sess = ii_combineruns(ii_trial);
 %     save(sprintf('%s%s_ii_sess.mat',root,subjid),'ii_sess')
 
+%% look at error stuff
 
+ii_sess.f_sacc_err
+ii_sess.i_sacc_err
+% 
+% 
+% priorityVec = [0.6 0.3 0.1];
+% nPriorities = length(priorityVec);
+% 
+% [nTrials,pErr,fErr] = deal(nan(nSubj,nPriorities));
+% 
+%     % ==== GET EYE DATA =====
+%     
+%     % load filename
+%     root = sprintf('/Volumes/data/Pri_quad/behavior/eyetracking/%s/',subjid);
+%     load(sprintf('%s%s_ii_sess.mat',root,subjid))
+%     
+%     % trial exclusion
+% %     which_excl = [11 13 20 21]; % which indices to reject
+% %     use_trial = ~cellfun( @any, cellfun( @(a) ismember(a, which_excl), ii_sess.excl_trial, 'UniformOutput',false));
+% use_trial = ~isnan(sum(ii_sess.f_sacc_err,2));
+%     fprintf('keeping %0.03f%% of trials\n',mean(use_trial)*100);
+%     
+%     % get primary and final saccade error
+%     primaryError = ii_sess.i_sacc_err(use_trial,:);
+%     finalError = ii_sess.f_sacc_err(use_trial,:);
+%     % target = ii_sess.targ(use_trial,:);
+%     
+%     % ====== PRIORITY DATA =========
+%     
+%     filename = sprintf('%s_outputmatrix.mat',subjid);
+%     load(filename)
+%     
+%     % make sure that they are the same size
+%     assert(size(use_trial,1) == size(outputMatrix,1))
+%     
+%     priorities = outputMatrix(use_trial,7);
+%     
+%     for ipriority = 1:nPriorities
+%         priority = priorityVec(ipriority);
+%         idx = priorities == priority;
+%         
+%         nTrials(isubj,ipriority) = sum(idx);
+%         pErr(isubj,ipriority) = mean(primaryError(idx));
+%         fErr(isubj,ipriority) = mean(finalError(idx));
+%     end
+%     
+% end
+% nTrials
+% pErr
+% fErr
 
 %% ==================================================================
 %                   MODEL RELATED
