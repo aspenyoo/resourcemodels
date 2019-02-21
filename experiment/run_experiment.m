@@ -1,4 +1,4 @@
-% RUN_EXPERIMENT runs an experiment with different
+   % RUN_EXPERIMENT runs an experiment with different
 %
 % code substantially modified from Afredo's file pri_4targ_wm_LngTR.m
 
@@ -26,15 +26,15 @@ try
 %     dot_w = 0.2;           % width of dot (deg)
     
     % timing (seconds)
-    time_start = 1.9;
+    time_start = 0.5;
     time_fixExpand = 0.1;
     time_precue = 0.7;
     time_interval = 0.1;
     time_present = 0.1;
     time_ISI = 1;
-    time_responseCue = 0.8;
+    time_responseCue = 1;
     time_feedback = 0.8;
-    time_ITI = 1;
+    time_ITI = 1.5;
     
     % relevant response keys
     KbName('UnifyKeyNames');
@@ -113,8 +113,9 @@ try
         % multiply the condmats according to priority
         multiplier = roundn(nonzeroPrioritySet./min(nonzeroPrioritySet),-4);
         % do something for the case that multiplier does not result in integers
+        % ASPEN WORK ON THIS!!
         %     if (sum(round(multiplier) == multiplier) ~= nItems)
-        %         sprintf('fuck')
+        %         sprintf('ASPEN')
         %     end
         designMat = [];
         for ipriority = 1:nNonzeroPriorities
@@ -143,9 +144,9 @@ try
         Y = Y + (rand(size(Y))-0.5)*jitter;
         designMat = [designMat round(X) round(Y)];
         
-        save(filename,'designMat','trial')
+        save(filename,'designMat','trial','settings')
     else
-        load(filename,'designMat','trial')
+        load(filename,'designMat','trial','settings')
     end
     
     % Get EyeTracker and Provide info
@@ -174,7 +175,7 @@ try
             error('link_sample_data error, status: ',s)
         end
         %get gaze data from 
-        edfFile=sprintf('%seyedata_%s_run%02d.edf', folderDir, subjectID, run);
+        edfFile=sprintf('%seyedata_%s_pricond%d_run%02d.edf', folderDir, subjectID, iset, run);
         tempfilename = 'blah.edf';
         Eyelink('openfile',tempfilename);
     end
@@ -237,9 +238,10 @@ try
         Screen('FillOval', windowPtr, black, dotrect);
         Screen('FrameOval', windowPtr, black, [center-fixationsize-5 center+fixationsize+5], 2);    % circle fixation
         
+        
         Screen('Flip', windowPtr);
         WaitSecs(time_fixExpand);
-        
+%tic        
         
         % =============== 2: precue ===============
         %write to eyetrck data
@@ -253,7 +255,10 @@ try
         %Draw fixation
         drawPrecue(windowPtr,designMat(itrial,1:nItems))
         % Show it:
+        % fprintf('first fixation')
+        % toc
         Screen('Flip', windowPtr);
+        % tic;
         % Wait
         WaitSecs(time_precue);
         
@@ -270,7 +275,11 @@ try
         %Draw fixation
         Screen('FillOval', windowPtr, 0, dotrect);
         Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
+        
+        % fprintf('fixation circle')
+        % toc
         Screen('Flip', windowPtr);
+        %% tic;
         % Wait
         WaitSecs(time_interval);
         
@@ -294,7 +303,10 @@ try
         %Draw Dots
         Screen('DrawDots', windowPtr, items_xy, repmat(itemsize,1,nItems), repmat(white,1,nItems), center,1);
         % Show it:
+        % fprintf('fixation circle')
+        % toc
         Screen('Flip', windowPtr);
+        % % tic;
         % Wait
         WaitSecs(time_present);
         
@@ -312,7 +324,10 @@ try
         Screen('FillOval', windowPtr, 0, dotrect);
         Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
         
+        % fprintf('targets appear')
+        % toc
         Screen('Flip', windowPtr);
+        % tic;
         %         delayStart(itrial)=GetSecs;
         % Delay
         WaitSecs(time_ISI);
@@ -345,7 +360,10 @@ try
         %Quadrant test
         Screen('FrameArc',windowPtr,white, circlerect,90*targetQuad,90,4);
         % Show it:
+        % fprintf('delay')
+        % toc
         Screen('Flip', windowPtr);
+        % tic;
         % Wait
         WaitSecs(time_responseCue);
         
@@ -366,7 +384,10 @@ try
         %Draw Test Dot
         Screen('DrawDots', windowPtr, target_xy, itemsize, white, center,1);
         % Show it:
+        % fprintf('response cue')
+        % toc
         Screen('Flip', windowPtr);
+        % tic;
         %wait
         WaitSecs(time_feedback);
         
@@ -385,8 +406,13 @@ try
         Screen('FillOval', windowPtr, 0, dotrect);
         Screen('FrameOval', windowPtr, 0, circlerect, 2);    % circle fixation
         
+        % fprintf('feedback')
+        % toc
         Screen('Flip', windowPtr);
+        % tic;
         WaitSecs(time_ITI);
+        % fprintf('ITI')
+        % toc
         %         trialEnd(itrial) = GetSecs;
         %         trialTime=trialEnd(itrial)-trialStart(itrial);
         if do_el
@@ -395,7 +421,7 @@ try
         end
          
         %save output matrix
-        save(filename,'designMat','trial')
+        save(filename,'designMat','trial','settings')
         trial = trial+1;
     end
     
@@ -414,8 +440,9 @@ try
         Eyelink('ShutDown');
     end
     
-    %Wait
-    KbStrokeWait;
+    % Wait
+    WaitSecs(0.5);
+    % KbStrokeWait;
     sca;
     
 catch
