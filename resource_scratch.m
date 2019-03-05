@@ -40,11 +40,9 @@ sca
 %% look at eye data
 
 clear all; close all
-% addpath(genpath('/Volumes/data/Pri_quad'))
 
-subjid = 'TST';
-% subjVec = {'AB','AY','CC','EK','KD','MR','MSR'};
-% nSubj = length(subjVec);
+subjid = 'AHY';
+pricond = 1;
 
 % put it in format
 ifg_fn = '~/Documents/MATLAB/iEye_ts/examples/p_500hz.ifg';
@@ -61,21 +59,21 @@ ii_params.plot_epoch = 1:8;  % what epochs do we plot for preprocessing?
 ii_params.calibrate_limits = 2.5; % when amount of adj exceeds this, don't actually calibrate (trial-wise); ignore trial for polynomial fitting (run)
 ii_params.ppd = 31.8578; % for scanner, 1280 x 1024 - convert pix to DVA
 
-edf_prefix = 'eyedata_';
-
+edf_prefix = sprintf('eyedata_%s_pricond%d_',subjid,pricond);
 
 % files
-root = '.';
-% root = sprintf('/Volumes/data/Pri_quad/behavior/eyetracking/%s/',subjid);
+root = sprintf('/Volumes/data/resourcemodels/output/%s/',subjid);
 edf_files = dir(fullfile(root,sprintf('%s*.edf',edf_prefix)));
+nFiles = length(edf_files);
 
 % create empty cell array of all our trial data for combination later on
-ii_trial = cell(length(edf_files),1);
+ii_trial = cell(nFiles,1);
 
-for ifile = 1:length(edf_files)
+for ifile = 1:nFiles
+    ifile
     
     % what is the output filename?
-    preproc_fn = sprintf('%sop%s_preproc.mat',root,edf_files(ifile).name(1:(end-4)));
+    preproc_fn = sprintf('%s%s_preproc.mat',root,edf_files(ifile).name(1:(end-4)));
     
     
     [ii_data, ii_cfg, ii_sacc] = ii_preproc(fullfile(root,edf_files(ifile).name),ifg_fn,preproc_fn,ii_params);
@@ -96,8 +94,84 @@ for ifile = 1:length(edf_files)
     [ii_trial{ifile},~] = ii_scoreMGS(ii_data,ii_cfg,ii_sacc);
     
 end
-    ii_sess = ii_combineruns(ii_trial);
-%     save(sprintf('%s%s_ii_sess.mat',root,subjid),'ii_sess')
+
+ii_sess = ii_combineruns(ii_trial);
+save(sprintf('%s%s_pricond%d_ii_sess.mat',root,subjid,pricond),'ii_sess','edf_files','ii_params')
+
+%% look at error as a function of priority
+
+clear all
+
+subjid = 'AHY';
+pricond = 1;
+
+% load experimental design matrix and eye data
+root = sprintf('/Volumes/data/resourcemodels/output/%s/',subjid);
+load(sprintf('%s%s_pricond%d_ii_sess.mat',root,subjid,pricond),'ii_sess') % eye data
+load(sprintf('%s%s_pricond%d_designMat.mat',root,subjid,pricond));%,'designMat','settings')
+
+idx_targetpri = 5; % designMat column index of the target priority
+priorityVec = unique(settings.prioritySets(pricond,:)); % current priority set
+nPriorities = length(priorityVec);
+
+% AHY (as of 2/29/2019) had some weird saving issues. these are adjustments
+% so the data and designMat are matched
+nTrialsPerRun = settings.nTrials/settings.nRuns;
+switch pricond
+    case 1
+        % sessions 1-5: everything worked "correctly", but there was a bug 
+        % in the experimental code where 12:12:XX trials were repeated
+        dmat = designMat(1:12,:);
+        for irun = 2:5
+            dmat = [dmat; designMat(((irun-1)*nTrialsPerRun):(irun*nTrialsPerRun),:)];
+        end
+    case 2
+        % session 3 is not included in here, bc it was only one trial,
+        % which causes errors in preproc
+        dmat = designMat(1:12,:);
+        for irun = [2 4 5]
+            dmat = [dmat; designMat(((irun-1)*nTrialsPerRun):(irun*nTrialsPerRun),:)];
+        end
+    case 3
+        % session 3 combined session 2 and 3, so 24th trial was not
+        % repeated, otherwise "correct" (has bug but otherwise correct)
+        dmat = designMat(1:12,:);
+        dmat = [dmat; designMat(((2-1)*nTrialsPerRun):(3*nTrialsPerRun),:)];
+        for irun = 4:5
+            dmat = [dmat; designMat(((irun-1)*nTrialsPerRun):(irun*nTrialsPerRun),:)];
+        end
+end
+designMat = dmat;
+targetpri = designMat(:,idx_targetpri);
+
+data_bypri = cell(1,nPriorities);
+for ipriority = 1:nPriorities
+    priority = priorityVec(ipriority);
+    
+    idx_pri = targetpri == priority;
+    data_bypri{ipriority} = ii_sess.f_sacc_err(idx_pri);
+end
+
+[M_error_bypri, sem_error_bypri] = deal(nan(1,nPriorities));
+for ipriority = 1:nPriorities
+    
+    M_error_bypri(ipriority) = nanmean(data_bypri{ipriority});
+    sem_error_bypri(ipriority) = nanstd(data_bypri{ipriority})./sqrt(sum(~isnan(data_bypri{ipriority})));
+end
+
+figure;
+errorbar(M_error_bypri, sem_error_bypri)
+set(gca,'XTick',1:nPriorities,'XTickLabel',priorityVec)
+defaultplot
+
+%%
+
+% which_excl = [11 13 20 21]; % which indices to reject
+% 11: drift correction too big
+% 13: find fixations in this trial (something about channels, not done yet)
+% 20: % no saccades identified in response epoch
+% 21: % none of the identified saccades (>0) passed exclusion criteria for primary saccade
+% 22: i_sacc error too high
 
 %% look at error stuff
 

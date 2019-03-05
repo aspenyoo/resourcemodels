@@ -109,7 +109,7 @@ try
             condmat{ipriority} = tempmat;
         end
         
-        trial = 0;
+        trial = 1;
         % multiply the condmats according to priority
         multiplier = roundn(nonzeroPrioritySet./min(nonzeroPrioritySet),-4);
         % do something for the case that multiplier does not result in integers
@@ -221,7 +221,7 @@ try
     %% ==============================================================
     %                    BEGIN TRIALS
     % ================================================================
-    for itrial=trial+1:nTrialsPerRun*run
+    for itrial=trial:nTrialsPerRun*run
         
         % =========== 1: fixation cross and circle expand ================
         % write to eyelink
@@ -421,8 +421,8 @@ try
         end
          
         %save output matrix
-        save(filename,'designMat','trial','settings')
         trial = trial+1;
+        save(filename,'designMat','trial','settings')
     end
     
     % Conclusion Screen
