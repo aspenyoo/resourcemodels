@@ -50,7 +50,6 @@ try
     black = BlackIndex(screenNumber);
     darkgray = white/2.2;
     
-    
     % =======================================================
     % ASPEN STUFF BELOW
     %====================================
@@ -113,33 +112,31 @@ try
         % multiply the condmats according to priority
         multiplier = roundn(nonzeroPrioritySet./min(nonzeroPrioritySet),-4);
         % do something for the case that multiplier does not result in integers
-        % ASPEN WORK ON THIS!!
-        %     if (sum(round(multiplier) == multiplier) ~= nItems)
-        %         sprintf('ASPEN')
-        %     end
+        if (sum(round(multiplier) == multiplier) ~= nItems)
+            error('Multiplier used to create designMat is not an integer')
+        end
         designMat = [];
         for ipriority = 1:nNonzeroPriorities
             tempmat = repmat(condmat{ipriority},multiplier(ipriority),1);
             designMat = [designMat; tempmat];
         end
-        nrowsDesignMat = size(designMat,1);
+
+        % getting the correct number of trials
+        designMat = repmat(designMat,ceil(nTrials/size(designMat,1)),1);
+        designMat(randperm(size(designMat,1)),:) = designMat;
+        designMat = designMat(1:nTrials,:);
         
         % locations of items
         possibleAngles = (10:10:80)/180*pi;
-        randangles = possibleAngles(randi(length(possibleAngles),nrowsDesignMat,nItems));
+        randangles = possibleAngles(randi(length(possibleAngles),nTrials,nItems));
         randangles(:,2) = randangles(:,2)+pi/2;
         randangles(:,3) = randangles(:,3)+pi;
         randangles(:,4) = randangles(:,4)+3*pi/2;
         designMat = [designMat randangles];
         
-        % getting the correct number of trials
-        designMat = repmat(designMat,ceil(nTrials/nrowsDesignMat),1);
-        designMat(randperm(nrowsDesignMat),:) = designMat;
-        designMat = designMat(1:nTrials,:);
-        
         %     designMat = [.6 .3 .1 0 .6 pi/180*[20 110 200 290]];
         % change to pixel locations (relative to center)
-        [X,Y] = pol2cart(designMat(:,end-nItems+1:end), stimulusecc);
+        [X,Y] = pol2cart(randangles, stimulusecc);
         X = X + (rand(size(X))-0.5)*jitter;
         Y = Y + (rand(size(Y))-0.5)*jitter;
         designMat = [designMat round(X) round(Y)];
@@ -237,7 +234,6 @@ try
         %Draw fixation
         Screen('FillOval', windowPtr, black, dotrect);
         Screen('FrameOval', windowPtr, black, [center-fixationsize-5 center+fixationsize+5], 2);    % circle fixation
-        
         
         Screen('Flip', windowPtr);
         WaitSecs(time_fixExpand);
