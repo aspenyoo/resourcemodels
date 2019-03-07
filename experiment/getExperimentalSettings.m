@@ -14,12 +14,12 @@ prioritySets = [0.6 0.3  0.1   0.0;
                 0.8 0.1 0.05 0.05];
       
 % experiment info
-settings.nTrials = 120;
-settings.nRuns = 10;
+settings.nTrials = 360;
+settings.nRuns = 12;
 
 % screen info
 screenDistance = 60;                      % distance between observer and Screen (in cm)
-screenHeight = 28.5;                        % height of screen (cm)
+screenHeight = 30;                        % height of screen (cm)
 ScreenNumber=max(Screen('Screens'));       % use external Screen if exists
 [w, h]=Screen('WindowSize', ScreenNumber);  % Screen resolution
 screenResolution = [w h];                 % Screen resolution
